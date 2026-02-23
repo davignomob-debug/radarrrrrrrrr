@@ -8,114 +8,86 @@ local function GetSafeGui()
     return CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Deleta qualquer painel antigo para não bugar
-if GetSafeGui():FindFirstChild("SniperOnly_V5") then
-    GetSafeGui():FindFirstChild("SniperOnly_V5"):Destroy()
+if GetSafeGui():FindFirstChild("SniperOptimized_V6") then
+    GetSafeGui():FindFirstChild("SniperOptimized_V6"):Destroy()
 end
 
 local sg = Instance.new("ScreenGui")
-sg.Name = "SniperOnly_V5"
-sg.ResetOnSpawn = false
+sg.Name = "SniperOptimized_V6"
 sg.Parent = GetSafeGui()
 
--- [[ FRAME PRINCIPAL - BEM PEQUENO ]] --
+-- [[ UI MINIMALISTA ]] --
 local Main = Instance.new("Frame", sg)
-Main.Size = UDim2.fromOffset(240, 110) -- Tamanho reduzido
-Main.Position = UDim2.new(0.5, -120, 0.5, -55)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Main.Size = UDim2.fromOffset(220, 100)
+Main.Position = UDim2.new(0.5, -110, 0.5, -50)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 local stroke = Instance.new("UIStroke", Main)
-stroke.Color = Color3.fromRGB(255, 255, 255)
+stroke.Color = Color3.fromRGB(0, 255, 150)
 stroke.Thickness = 1.5
 
--- TÍTULO
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundTransparency = 1
-Title.Text = "SNIPER COMUM"
-Title.TextColor3 = Color3.fromRGB(200, 200, 200)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
-
--- [[ O ÚNICO BOTÃO ]] --
 local FarmBtn = Instance.new("TextButton", Main)
-FarmBtn.Size = UDim2.new(0.85, 0, 0, 50)
-FarmBtn.Position = UDim2.new(0.075, 0, 0.38, 0)
-FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-FarmBtn.Text = "BUSCAR: OFF"
+FarmBtn.Size = UDim2.new(0.9, 0, 0.7, 0)
+FarmBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+FarmBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+FarmBtn.Text = "SNIPER LISO: OFF"
 FarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FarmBtn.Font = Enum.Font.GothamBold
 FarmBtn.TextSize = 14
-Instance.new("UICorner", FarmBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", FarmBtn)
 
--- LÓGICA DE CONTROLE
-_G.CommonFarm = false
+-- [[ LÓGICA ULTRA OTIMIZADA ]] --
+_G.Hunting = false
 
 local function stopFarm()
-    _G.CommonFarm = false
-    FarmBtn.Text = "BUSCAR: OFF"
-    FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    _G.Hunting = false
+    FarmBtn.Text = "SNIPER LISO: OFF"
+    FarmBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 end
 
 FarmBtn.MouseButton1Click:Connect(function()
-    _G.CommonFarm = not _G.CommonFarm
-    if _G.CommonFarm then
-        FarmBtn.Text = "BUSCANDO..."
-        FarmBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    else
-        stopFarm()
-    end
+    _G.Hunting = not _G.Hunting
+    FarmBtn.Text = _G.Hunting and "BUSCANDO..." or "SNIPER LISO: OFF"
+    FarmBtn.BackgroundColor3 = _G.Hunting and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(20, 20, 20)
 end)
 
--- LOOP DE BUSCA
-task.spawn(function()
-    while true do 
-        task.wait(0.01)
-        if _G.CommonFarm then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                if hrp then
-                    for _, v in pairs(game:GetDescendants()) do
-                        if not _G.CommonFarm then break end
+-- Usamos Heartbeat para rodar em sincronia com o FPS do jogo, sem travar a Render
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not _G.Hunting then return end
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-                        if v:IsA("ProximityPrompt") then
-                            local itemName = tostring(v.Parent.Name):lower()
-                            -- Filtra apenas itens comuns
-                            if itemName:find("common") or itemName:find("comum") then
-                                
-                                v.HoldDuration = 0
-                                local itemPos = v.Parent:IsA("BasePart") and v.Parent.Position or v.Parent:FindFirstChildWhichIsA("BasePart").Position
-                                
-                                if itemPos then
-                                    hrp.CFrame = CFrame.new(itemPos)
-                                    task.wait(0.05)
-                                    fireproximityprompt(v)
-                                    
-                                    -- Para após pegar 1
-                                    stopFarm()
-                                    break
-                                end
-                            end
-                        end
-                    end
+    -- Em vez de GetDescendants (pesado), olhamos apenas objetos próximos ou em pastas comuns
+    -- O pcall evita que erros de itens sumindo travem o script
+    pcall(function()
+        -- Workspace costuma ter uma pasta de "Dropped" ou "Items", mas vamos focar nos ProximityPrompts ativos
+        for _, v in pairs(game:GetService("ProximityService"):GetProximityPrompts()) do
+            if not _G.Hunting then break end
+            
+            if v.Enabled and v.Parent then
+                local name = v.Parent.Name:lower()
+                if name:find("common") or name:find("comum") then
+                    v.HoldDuration = 0
+                    local targetPos = v.Parent.Position
+                    
+                    -- Teleporte e Coleta
+                    hrp.CFrame = CFrame.new(targetPos)
+                    fireproximityprompt(v)
+                    
+                    stopFarm()
+                    break
                 end
-            end)
+            end
         end
-    end
+    end)
 end)
 
--- FECHAR
+-- FECHAR E DRAG (Mantidos simples)
 local Close = Instance.new("TextButton", Main)
-Close.Size = UDim2.fromOffset(20, 20); Close.Position = UDim2.new(1, -25, 0, 5)
-Close.BackgroundTransparency = 1; Close.Text = "X"; Close.TextColor3 = Color3.fromRGB(255, 80, 80); Close.Font = Enum.Font.GothamBold
-Close.MouseButton1Click:Connect(function() 
-    _G.CommonFarm = false 
-    sg:Destroy() 
-end)
+Close.Size = UDim2.fromOffset(20, 20); Close.Position = UDim2.new(1, -22, 0, 2); Close.BackgroundTransparency = 1; Close.Text = "X"; Close.TextColor3 = Color3.fromRGB(255, 50, 50); Close.MouseButton1Click:Connect(function() _G.Hunting = false; sg:Destroy() end)
 
--- ARRASTAR
 local dragging, dragInput, dragStart, startPos
 Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
