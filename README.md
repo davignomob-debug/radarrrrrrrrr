@@ -8,59 +8,66 @@ local function GetSafeGui()
     return CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 end
 
-if GetSafeGui():FindFirstChild("CommonSniper_V4") then
-    GetSafeGui():FindFirstChild("CommonSniper_V4"):Destroy()
+-- Deleta qualquer painel antigo para não bugar
+if GetSafeGui():FindFirstChild("SniperOnly_V5") then
+    GetSafeGui():FindFirstChild("SniperOnly_V5"):Destroy()
 end
 
 local sg = Instance.new("ScreenGui")
-sg.Name = "CommonSniper_V4"
+sg.Name = "SniperOnly_V5"
 sg.ResetOnSpawn = false
 sg.Parent = GetSafeGui()
 
--- [[ UI COMPACTA ]] --
+-- [[ FRAME PRINCIPAL - BEM PEQUENO ]] --
 local Main = Instance.new("Frame", sg)
-Main.Size = UDim2.fromOffset(250, 130)
-Main.Position = UDim2.new(0.5, -125, 0.5, -65)
-Main.BackgroundColor3 = Color3.fromRGB(20, 25, 20)
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
+Main.Size = UDim2.fromOffset(240, 110) -- Tamanho reduzido
+Main.Position = UDim2.new(0.5, -120, 0.5, -55)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 local stroke = Instance.new("UIStroke", Main)
-stroke.Color = Color3.fromRGB(100, 255, 100)
-stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(255, 255, 255)
+stroke.Thickness = 1.5
 
+-- TÍTULO
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundTransparency = 1
-Title.Text = "SNIPER: 1 COMUM"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "SNIPER COMUM"
+Title.TextColor3 = Color3.fromRGB(200, 200, 200)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
+Title.TextSize = 13
 
--- [[ BOTÃO ÚNICO: AUTO COLETAR ]] --
+-- [[ O ÚNICO BOTÃO ]] --
 local FarmBtn = Instance.new("TextButton", Main)
-FarmBtn.Size = UDim2.new(0.85, 0, 0, 55)
-FarmBtn.Position = UDim2.new(0.075, 0, 0.4, 0)
-FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 45, 30)
-FarmBtn.Text = "BUSCAR COMUM: OFF"
-FarmBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
+FarmBtn.Size = UDim2.new(0.85, 0, 0, 50)
+FarmBtn.Position = UDim2.new(0.075, 0, 0.38, 0)
+FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+FarmBtn.Text = "BUSCAR: OFF"
+FarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FarmBtn.Font = Enum.Font.GothamBold
-FarmBtn.TextSize = 15
-Instance.new("UICorner", FarmBtn).CornerRadius = UDim.new(0, 10)
+FarmBtn.TextSize = 14
+Instance.new("UICorner", FarmBtn).CornerRadius = UDim.new(0, 8)
 
--- [[ LÓGICA DE CONTROLE ]] --
+-- LÓGICA DE CONTROLE
 _G.CommonFarm = false
 
 local function stopFarm()
     _G.CommonFarm = false
-    FarmBtn.Text = "BUSCAR COMUM: OFF"
-    FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 45, 30)
+    FarmBtn.Text = "BUSCAR: OFF"
+    FarmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 end
 
 FarmBtn.MouseButton1Click:Connect(function()
     _G.CommonFarm = not _G.CommonFarm
-    FarmBtn.Text = _G.CommonFarm and "BUSCANDO... (1)" or "BUSCAR COMUM: OFF"
-    FarmBtn.BackgroundColor3 = _G.CommonFarm and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(30, 45, 30)
+    if _G.CommonFarm then
+        FarmBtn.Text = "BUSCANDO..."
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    else
+        stopFarm()
+    end
 end)
 
+-- LOOP DE BUSCA
 task.spawn(function()
     while true do 
         task.wait(0.01)
@@ -86,7 +93,7 @@ task.spawn(function()
                                     task.wait(0.05)
                                     fireproximityprompt(v)
                                     
-                                    -- Para instantaneamente após a primeira captura
+                                    -- Para após pegar 1
                                     stopFarm()
                                     break
                                 end
@@ -101,14 +108,14 @@ end)
 
 -- FECHAR
 local Close = Instance.new("TextButton", Main)
-Close.Size = UDim2.fromOffset(25, 25); Close.Position = UDim2.new(1, -30, 0, 5)
-Close.BackgroundTransparency = 1; Close.Text = "X"; Close.TextColor3 = Color3.fromRGB(255, 50, 50); Close.Font = Enum.Font.GothamBold
+Close.Size = UDim2.fromOffset(20, 20); Close.Position = UDim2.new(1, -25, 0, 5)
+Close.BackgroundTransparency = 1; Close.Text = "X"; Close.TextColor3 = Color3.fromRGB(255, 80, 80); Close.Font = Enum.Font.GothamBold
 Close.MouseButton1Click:Connect(function() 
     _G.CommonFarm = false 
     sg:Destroy() 
 end)
 
--- DRAG
+-- ARRASTAR
 local dragging, dragInput, dragStart, startPos
 Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
