@@ -10,17 +10,17 @@ local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cact
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // ANTI-AFK (Dormir sem tomar Kick)
+-- // ANTI-AFK
 local VirtualUser = game:GetService("VirtualUser")
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- // INTERFACE ARRASTÁVEL V11 + BOTÃO X
+-- // INTERFACE V11 + BOTÃO X (SEM SERVER HOP)
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
-    sg.Name = "AutoFarm_Infinite_V11"
+    sg.Name = "Brainrot_V11_Final"
 
     local Main = Instance.new("Frame", sg)
     Main.Size = UDim2.fromOffset(250, 220)
@@ -33,20 +33,16 @@ local function CreateUI()
     stroke.Color = Color3.fromRGB(0, 255, 127)
     stroke.Thickness = 2
 
-    -- BOTÃO X PARA FECHAR
+    -- BOTÃO FECHAR (X)
     local CloseBtn = Instance.new("TextButton", Main)
     CloseBtn.Size = UDim2.fromOffset(25, 25)
     CloseBtn.Position = UDim2.new(1, -30, 0, 5)
     CloseBtn.Text = "X"
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
     CloseBtn.TextColor3 = Color3.new(1, 1, 1)
     CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.TextSize = 14
     Instance.new("UICorner", CloseBtn)
-    
-    CloseBtn.MouseButton1Click:Connect(function()
-        sg:Destroy()
-    end)
+    CloseBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
 
     local Title = Instance.new("TextLabel", Main)
     Title.Size = UDim2.new(1, 0, 0, 35)
@@ -72,8 +68,7 @@ local function CreateUI()
     ListFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     ListFrame.ScrollBarThickness = 3
     Instance.new("UICorner", ListFrame)
-
-    local Layout = Instance.new("UIListLayout", ListFrame)
+    Instance.new("UIListLayout", ListFrame)
 
     for i, name in ipairs(Brainrots) do
         local b = Instance.new("TextButton", ListFrame)
@@ -83,17 +78,15 @@ local function CreateUI()
         b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
         b.Font = Enum.Font.Gotham
         b.BorderSizePixel = 0
-        
         b.MouseButton1Click:Connect(function()
             AlvoSelecionado = name:lower()
             Title.Text = "ALVO: " .. name:upper()
-            for _, v in pairs(ListFrame:GetChildren()) do
-                if v:IsA("TextButton") then v.TextColor3 = Color3.new(0.7, 0.7, 0.7) end
-            end
+            for _, v in pairs(ListFrame:GetChildren()) do if v:IsA("TextButton") then v.TextColor3 = Color3.new(0.7, 0.7, 0.7) end end
             b.TextColor3 = Color3.fromRGB(0, 255, 127)
         end)
     end
 
+    -- ARRASTAR UI
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
     UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
@@ -104,36 +97,38 @@ local function CreateUI()
 end
 
 local ToggleBtn = CreateUI()
-
 ToggleBtn.MouseButton1Click:Connect(function() 
     FarmAtivo = not FarmAtivo 
     ToggleBtn.Text = FarmAtivo and "FARMANDO... (ON)" or "AUTO FARM: OFF" 
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
 end)
 
--- // LÓGICA DE TELEPORTE MAPA TODO
-RunService.Heartbeat:Connect(function()
-    if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
-
-    for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
-        local item = prompt.Parent
-        if item and (item.Name:lower():find(AlvoSelecionado) or (prompt.ObjectText or ""):lower():find(AlvoSelecionado)) then
+-- // LÓGICA DE TELEPORTE GRANDE E AGRESSIVO
+task.spawn(function()
+    while true do task.wait(0.05)
+        if FarmAtivo and AlvoSelecionado ~= "nenhum" then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
-
-                if hrp and targetPart then
-                    prompt.MaxActivationDistance = 9e9
-                    prompt.RequiresLineOfSight = false
-                    
-                    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                    
-                    task.wait(0.1) 
-                    prompt.HoldDuration = 0
-                    fireproximityprompt(prompt)
-                    
-                    task.wait(0.5) 
+                if hrp then
+                    for _, v in pairs(game:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            local item = v.Parent
+                            if item and item.Name:lower():find(AlvoSelecionado) then
+                                local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+                                if targetPart then
+                                    -- Teleporte Instantâneo via CFrame
+                                    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+                                    v.HoldDuration = 0
+                                    v.MaxActivationDistance = 9e9
+                                    
+                                    task.wait(0.05)
+                                    fireproximityprompt(v)
+                                    task.wait(0.3)
+                                end
+                            end
+                        end
+                    end
                 end
             end)
         end
