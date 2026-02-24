@@ -1,23 +1,23 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
 
--- // LISTA COMPLETA DE BRAINROTS
+-- // LISTA COMPLETA DE BRAINROTS (V11 ORIGINAL)
 local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli", "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur" }
 
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // ANTI-AFK (Dormir sem tomar Kick)
+-- // ANTI-AFK (Dormir sem Kick)
 local VirtualUser = game:GetService("VirtualUser")
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- // INTERFACE ARRASTÁVEL V11 (EXATAMENTE COMO VOCÊ MANDOU)
+-- // INTERFACE ARRASTÁVEL V11 (MANTIDA ORIGINAL)
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
     sg.Name = "AutoFarm_Infinite_V11"
@@ -96,59 +96,33 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
 end)
 
--- // FUNÇÃO DE TELEPORTE E COLETA (LONGE)
-local function ProcessItem(item)
+-- // LÓGICA DE TELEPORTE DIRETO (MAPA TODO)
+RunService.Heartbeat:Connect(function()
     if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
-    
-    local nomeObj = item.Name:lower()
-    local prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
-    
-    -- Verifica se o nome do objeto bate com o alvo selecionado
-    if nomeObj:find(AlvoSelecionado) then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
 
-            if hrp and targetPart then
-                -- Teleporte Imediato
-                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                
-                -- Forçar distância do prompt se ele existir
-                if not prompt then
-                    -- Se o prompt ainda não carregou, espera 1 segundo no máximo
-                    local start = tick()
-                    repeat 
-                        prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
-                        task.wait(0.1)
-                    until prompt or (tick() - start) > 1
-                end
+    -- Busca direta em todos os botões do mapa
+    for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
+        local item = prompt.Parent
+        if item and item.Name:lower():find(AlvoSelecionado) then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
 
-                if prompt then
+                if hrp and targetPart then
+                    -- TELEPORTE FORÇADO (Independente da distância)
+                    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+                    
+                    -- BYPASS DE DISTÂNCIA
                     prompt.MaxActivationDistance = math.huge
+                    
+                    -- COLETA
                     task.wait(0.1)
-                    prompt.HoldDuration = 0
                     fireproximityprompt(prompt)
+                    
+                    task.wait(0.5) 
                 end
-                
-                task.wait(0.5) 
-            end
-        end)
-    end
-end
-
--- // ESCANEIA O MAPA INTEIRO CONSTANTEMENTE (SEM LAG)
-Workspace.DescendantAdded:Connect(ProcessItem)
-
--- Também checa o que já existe no mapa no momento que ativa
-task.spawn(function()
-    while task.wait(1) do
-        if FarmAtivo then
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v.Name:lower():find(AlvoSelecionado) then
-                    ProcessItem(v)
-                end
-            end
+            end)
         end
     end
 end)
