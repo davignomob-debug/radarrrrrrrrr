@@ -1,16 +1,17 @@
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- // LISTA COMPLETA DE BRAINROTS
 local Brainrots = {
-    "Nenhum",
-    "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli",
-    "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur"
+    "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto",
+    "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni",
+    "Loliloli", "Boneca", "Ambalabu", "Trippi Troppi", "Svinina",
+    "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo",
+    "Bandito", "Bobrito", "Tatatata", "Sahur"
 }
 
-local AlvoSelecionado = "Nenhum"
+local AlvoSelecionado = "nenhum"
 local FarmAtivo = false
 
 -- // INTERFACE ARRASTÁVEL
@@ -24,7 +25,7 @@ local function CreateUI()
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-    
+
     local stroke = Instance.new("UIStroke", Main)
     stroke.Color = Color3.fromRGB(0, 255, 127)
     stroke.Thickness = 2
@@ -64,7 +65,7 @@ local function CreateUI()
         b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
         b.Font = Enum.Font.Gotham
         b.BorderSizePixel = 0
-        
+
         b.MouseButton1Click:Connect(function()
             AlvoSelecionado = name:lower()
             Title.Text = "ALVO: " .. name:upper()
@@ -77,15 +78,28 @@ local function CreateUI()
 
     -- Arrastar UI
     local dragging, dragInput, dragStart, startPos
-    Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
-    UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
-    Main.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = Main.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    Main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
 
-    return Toggle
+    return Toggle, Title
 end
 
-local ToggleBtn = CreateUI()
+local ToggleBtn, TitleLabel = CreateUI()
 
 ToggleBtn.MouseButton1Click:Connect(function()
     FarmAtivo = not FarmAtivo
@@ -93,37 +107,43 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35)
 end)
 
--- // LÓGICA INFINITA (DORMIR E FARMAR)
-ProximityPromptService.PromptShown:Connect(function(prompt)
-    if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
-
-    local item = prompt.Parent
-    if not item then return end
-
-    local nomeObj = item.Name:lower()
-    local textoPrompt = (prompt.ObjectText or ""):lower()
-
-    -- Verifica se o item é o alvo
-    if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
-
-            if hrp and targetPart then
-                -- Teleporte e Coleta
-                local originalPos = hrp.CFrame -- Salva sua posição
-                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                
-                task.wait(0.1) -- Tempo para o servidor registrar
-                prompt.HoldDuration = 0
-                fireproximityprompt(prompt)
-                
-                -- O SEGREDO PARA IR DORMIR:
-                -- Ele NÃO desativa o SniperAtivo. 
-                -- Ele apenas espera um pouco e você continua pronto para o próximo!
-                task.wait(0.5) 
+-- // BUSCA O PROMPT DO ALVO NO MAPA TODO
+local function FindPromptDoAlvo()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local nomeObj = (obj.Parent and obj.Parent.Name or ""):lower()
+            local textoPrompt = (obj.ObjectText or ""):lower()
+            if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
+                return obj
             end
+        end
+    end
+    return nil
+end
+
+-- // LOOP PRINCIPAL - TELEPORTA E FARMA DE QUALQUER DISTÂNCIA
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if not FarmAtivo or AlvoSelecionado == "nenhum" then continue end
+
+        local prompt = FindPromptDoAlvo()
+        if not prompt then continue end
+
+        local item = prompt.Parent
+        local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+        if not targetPart then continue end
+
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+
+        pcall(function()
+            hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+            task.wait(0.15)
+            prompt.HoldDuration = 0
+            fireproximityprompt(prompt)
+            task.wait(0.5)
         end)
     end
 end)
