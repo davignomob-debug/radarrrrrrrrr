@@ -4,14 +4,24 @@ local LocalPlayer = Players.LocalPlayer
 
 -- // LISTA COMPLETA DE BRAINROTS
 local Brainrots = {
-    "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto",
-    "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni",
-    "Loliloli", "Boneca", "Ambalabu", "Trippi Troppi", "Svinina",
-    "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo",
-    "Bandito", "Bobrito", "Tatatata", "Sahur"
+    "Tim Cheese", "LiriliLarila", "Fluri Flura", "Cacto Hipopotamo",
+    "Pipi Potato", "Tric Trac Barabum", "Burbaloni Loliloli", "Boneca Ambalabu",
+    "Trippi Troppi", "Svinina Bombardino", "Bambini Crostini", "Avocadini Guffo",
+    "Bandito Bobrito", "Tatatata Sahur",
+    "Gangster Footera", "Tung Tung Sahur", "Cappuccino Assassino", "Pipi Kiwi",
+    "Orangutini Ananassini", "Talpa Di Fero", "Espresso Signora",
+    "Brr Brr Patapim", "Rhino Toasterino", "Brr Bicus Dicus",
+    "Strawberrelli Flamingelli", "Bananito Delfinito", "Balerina Capucina", "Glorbo Fruttodrillo",
+    "Blueberrinni Octopusini", "Chimpanzini Bananini", "Bombardiro Crocodilo", "Elefanto Cocofanto",
+    "Bombombini Gusini", "Pandaccini Bananini", "Chef Crabracadabra",
+    "Gorillo Watermelondrillo", "Frigo Camelo", "Girafa Celestre",
+    "Ganganzelli Trulala", "Tigroligre Frutonni",
+    "Tralalerodon", "Esok", "La Vaca", "Strawberry",
+    "Capitano Clash Warnini", "Meowl"
 }
 
-local AlvoSelecionado = "nenhum"
+-- // AGORA É UMA TABELA DE SELECIONADOS
+local AlvosSelecionados = {}
 local FarmAtivo = false
 
 -- // INTERFACE ARRASTÁVEL
@@ -55,7 +65,7 @@ local function CreateUI()
     ListFrame.ScrollBarThickness = 3
     Instance.new("UICorner", ListFrame)
 
-    local Layout = Instance.new("UIListLayout", ListFrame)
+    Instance.new("UIListLayout", ListFrame)
 
     for i, name in ipairs(Brainrots) do
         local b = Instance.new("TextButton", ListFrame)
@@ -67,12 +77,29 @@ local function CreateUI()
         b.BorderSizePixel = 0
 
         b.MouseButton1Click:Connect(function()
-            AlvoSelecionado = name:lower()
-            Title.Text = "ALVO: " .. name:upper()
-            for _, v in pairs(ListFrame:GetChildren()) do
-                if v:IsA("TextButton") then v.TextColor3 = Color3.new(0.7, 0.7, 0.7) end
+            local lower = name:lower()
+            if AlvosSelecionados[lower] then
+                -- Desseleciona
+                AlvosSelecionados[lower] = nil
+                b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+                b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            else
+                -- Seleciona
+                AlvosSelecionados[lower] = true
+                b.TextColor3 = Color3.fromRGB(0, 255, 127)
+                b.BackgroundColor3 = Color3.fromRGB(20, 50, 35)
             end
-            b.TextColor3 = Color3.fromRGB(0, 255, 127)
+
+            -- Atualiza título com quantidade selecionada
+            local count = 0
+            for _ in pairs(AlvosSelecionados) do count = count + 1 end
+            if count == 0 then
+                Title.Text = "AUTO FARM INFINITO"
+            elseif count == 1 then
+                Title.Text = "1 SELECIONADO"
+            else
+                Title.Text = count .. " SELECIONADOS"
+            end
         end)
     end
 
@@ -96,10 +123,10 @@ local function CreateUI()
         if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
 
-    return Toggle, Title
+    return Toggle
 end
 
-local ToggleBtn, TitleLabel = CreateUI()
+local ToggleBtn = CreateUI()
 
 ToggleBtn.MouseButton1Click:Connect(function()
     FarmAtivo = not FarmAtivo
@@ -107,25 +134,27 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35)
 end)
 
--- // BUSCA O PROMPT DO ALVO NO MAPA TODO
+-- // BUSCA PROMPT DE QUALQUER ALVO SELECIONADO
 local function FindPromptDoAlvo()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             local nomeObj = (obj.Parent and obj.Parent.Name or ""):lower()
             local textoPrompt = (obj.ObjectText or ""):lower()
-            if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
-                return obj
+            for alvo, _ in pairs(AlvosSelecionados) do
+                if nomeObj:find(alvo) or textoPrompt:find(alvo) then
+                    return obj
+                end
             end
         end
     end
     return nil
 end
 
--- // LOOP PRINCIPAL - TELEPORTA E FARMA DE QUALQUER DISTÂNCIA
+-- // LOOP PRINCIPAL
 task.spawn(function()
     while true do
-        task.wait(0.5)
-        if not FarmAtivo or AlvoSelecionado == "nenhum" then continue end
+        task.wait(0.1)
+        if not FarmAtivo or next(AlvosSelecionados) == nil then continue end
 
         local prompt = FindPromptDoAlvo()
         if not prompt then continue end
@@ -140,10 +169,10 @@ task.spawn(function()
 
         pcall(function()
             hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.15)
+            task.wait(0.05)
             prompt.HoldDuration = 0
             fireproximityprompt(prompt)
-            task.wait(0.5)
+            task.wait(0.2)
         end)
     end
 end)
