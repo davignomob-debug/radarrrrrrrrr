@@ -6,8 +6,8 @@ local LocalPlayer = Players.LocalPlayer
 -- // LISTA DE BRAINROTS (CONFORME SOLICITADO)
 local Brainrots = {
     "Nenhum",
-    "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli", -- Communs
-    "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur" -- Uncommons
+    "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto Hipopotamo", "Pipi Potato", "Tric Trac Barabum", "Burbaloni Loliloli", -- Communs
+    "Boneca Ambalabu", "Trippi Troppi", "Svinina Bombardino", "Bambini Crostini", "Avacodini Guffo", "Bandito Bobrito", "Tatatata Sahur" -- Uncommons
 }
 
 local AlvoSelecionado = "Nenhum"
