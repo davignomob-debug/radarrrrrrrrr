@@ -1,23 +1,19 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- // LISTA COMPLETA DE BRAINROTS (V11 ORIGINAL)
-local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli", "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur" }
+-- // LISTA COMPLETA DE BRAINROTS
+local Brainrots = {
+    "Nenhum",
+    "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli",
+    "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur"
+}
 
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // ANTI-AFK (Dormir sem Kick)
-local VirtualUser = game:GetService("VirtualUser")
-LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
-
--- // INTERFACE ARRASTÁVEL V11 (MANTIDA ORIGINAL)
+-- // INTERFACE ARRASTÁVEL
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
     sg.Name = "AutoFarm_Infinite_V11"
@@ -28,7 +24,7 @@ local function CreateUI()
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-
+    
     local stroke = Instance.new("UIStroke", Main)
     stroke.Color = Color3.fromRGB(0, 255, 127)
     stroke.Thickness = 2
@@ -79,6 +75,7 @@ local function CreateUI()
         end)
     end
 
+    -- Arrastar UI
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
     UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
@@ -90,39 +87,43 @@ end
 
 local ToggleBtn = CreateUI()
 
-ToggleBtn.MouseButton1Click:Connect(function() 
-    FarmAtivo = not FarmAtivo 
-    ToggleBtn.Text = FarmAtivo and "FARMANDO... (ON)" or "AUTO FARM: OFF" 
-    ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
+ToggleBtn.MouseButton1Click:Connect(function()
+    FarmAtivo = not FarmAtivo
+    ToggleBtn.Text = FarmAtivo and "FARMANDO... (ON)" or "AUTO FARM: OFF"
+    ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35)
 end)
 
--- // LÓGICA DE TELEPORTE DIRETO (MAPA TODO)
-RunService.Heartbeat:Connect(function()
+-- // LÓGICA INFINITA (DORMIR E FARMAR)
+ProximityPromptService.PromptShown:Connect(function(prompt)
     if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
 
-    -- Busca direta em todos os botões do mapa
-    for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
-        local item = prompt.Parent
-        if item and item.Name:lower():find(AlvoSelecionado) then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+    local item = prompt.Parent
+    if not item then return end
 
-                if hrp and targetPart then
-                    -- TELEPORTE FORÇADO (Independente da distância)
-                    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                    
-                    -- BYPASS DE DISTÂNCIA
-                    prompt.MaxActivationDistance = math.huge
-                    
-                    -- COLETA
-                    task.wait(0.1)
-                    fireproximityprompt(prompt)
-                    
-                    task.wait(0.5) 
-                end
-            end)
-        end
+    local nomeObj = item.Name:lower()
+    local textoPrompt = (prompt.ObjectText or ""):lower()
+
+    -- Verifica se o item é o alvo
+    if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+
+            if hrp and targetPart then
+                -- Teleporte e Coleta
+                local originalPos = hrp.CFrame -- Salva sua posição
+                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+                
+                task.wait(0.1) -- Tempo para o servidor registrar
+                prompt.HoldDuration = 0
+                fireproximityprompt(prompt)
+                
+                -- O SEGREDO PARA IR DORMIR:
+                -- Ele NÃO desativa o SniperAtivo. 
+                -- Ele apenas espera um pouco e você continua pronto para o próximo!
+                task.wait(0.5) 
+            end
+        end)
     end
 end)
