@@ -20,18 +20,16 @@ local Brainrots = {
     "Capitano Clash Warnini", "Meowl"
 }
 
--- // AGORA É UMA TABELA DE SELECIONADOS
 local AlvosSelecionados = {}
 local FarmAtivo = false
 
--- // INTERFACE ARRASTÁVEL
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
     sg.Name = "AutoFarm_Infinite_V11"
 
     local Main = Instance.new("Frame", sg)
-    Main.Size = UDim2.fromOffset(250, 220)
-    Main.Position = UDim2.new(0.5, -125, 0.4, 0)
+    Main.Size = UDim2.fromOffset(320, 320)
+    Main.Position = UDim2.new(0.5, -160, 0.4, 0)
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
@@ -40,57 +38,81 @@ local function CreateUI()
     stroke.Color = Color3.fromRGB(0, 255, 127)
     stroke.Thickness = 2
 
+    -- // TÍTULO
     local Title = Instance.new("TextLabel", Main)
-    Title.Size = UDim2.new(1, 0, 0, 35)
+    Title.Size = UDim2.new(1, -40, 0, 45)
     Title.Text = "AUTO FARM INFINITO"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.BackgroundTransparency = 1
     Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
+    Title.TextSize = 18
 
+    -- // BOTÃO FECHAR
+    local CloseBtn = Instance.new("TextButton", Main)
+    CloseBtn.Size = UDim2.fromOffset(30, 30)
+    CloseBtn.Position = UDim2.new(1, -35, 0, 7)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 16
+    CloseBtn.BorderSizePixel = 0
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+    CloseBtn.MouseEnter:Connect(function()
+        CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+    end)
+    CloseBtn.MouseLeave:Connect(function()
+        CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+    CloseBtn.MouseButton1Click:Connect(function()
+        sg:Destroy()
+        FarmAtivo = false
+    end)
+
+    -- // BOTÃO TOGGLE
     local Toggle = Instance.new("TextButton", Main)
-    Toggle.Size = UDim2.new(0.9, 0, 0, 40)
-    Toggle.Position = UDim2.new(0.05, 0, 0.2, 0)
+    Toggle.Size = UDim2.new(0.9, 0, 0, 48)
+    Toggle.Position = UDim2.new(0.05, 0, 0.17, 0)
     Toggle.Text = "AUTO FARM: OFF"
     Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     Toggle.TextColor3 = Color3.new(1, 1, 1)
     Toggle.Font = Enum.Font.GothamBold
+    Toggle.TextSize = 17
     Instance.new("UICorner", Toggle)
 
+    -- // LISTA
     local ListFrame = Instance.new("ScrollingFrame", Main)
-    ListFrame.Size = UDim2.new(0.9, 0, 0.45, 0)
-    ListFrame.Position = UDim2.new(0.05, 0, 0.45, 0)
-    ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#Brainrots * 25))
+    ListFrame.Size = UDim2.new(0.9, 0, 0.55, 0)
+    ListFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+    ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#Brainrots * 34))
     ListFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    ListFrame.ScrollBarThickness = 3
+    ListFrame.ScrollBarThickness = 4
     Instance.new("UICorner", ListFrame)
-
     Instance.new("UIListLayout", ListFrame)
 
     for i, name in ipairs(Brainrots) do
         local b = Instance.new("TextButton", ListFrame)
-        b.Size = UDim2.new(1, 0, 0, 25)
+        b.Size = UDim2.new(1, 0, 0, 34)
         b.Text = name
         b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
         b.Font = Enum.Font.Gotham
+        b.TextSize = 15
         b.BorderSizePixel = 0
 
         b.MouseButton1Click:Connect(function()
             local lower = name:lower()
             if AlvosSelecionados[lower] then
-                -- Desseleciona
                 AlvosSelecionados[lower] = nil
                 b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
                 b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             else
-                -- Seleciona
                 AlvosSelecionados[lower] = true
                 b.TextColor3 = Color3.fromRGB(0, 255, 127)
                 b.BackgroundColor3 = Color3.fromRGB(20, 50, 35)
             end
 
-            -- Atualiza título com quantidade selecionada
             local count = 0
             for _ in pairs(AlvosSelecionados) do count = count + 1 end
             if count == 0 then
@@ -103,7 +125,7 @@ local function CreateUI()
         end)
     end
 
-    -- Arrastar UI
+    -- // ARRASTAR
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -134,7 +156,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35)
 end)
 
--- // BUSCA PROMPT DE QUALQUER ALVO SELECIONADO
+-- // BUSCA PROMPT
 local function FindPromptDoAlvo()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
