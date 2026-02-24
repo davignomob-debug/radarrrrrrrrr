@@ -10,14 +10,14 @@ local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cact
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // ANTI-AFK (Dormir sem DC)
+-- // ANTI-AFK (Dormir sem tomar Kick)
 local VirtualUser = game:GetService("VirtualUser")
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- // INTERFACE V11 (MANTIDA ORIGINAL)
+-- // INTERFACE ARRASTÁVEL V11 (MANTIDA IGUAL)
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
     sg.Name = "AutoFarm_Infinite_V11"
@@ -96,39 +96,42 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
 end)
 
--- // LÓGICA DE TELEPORTE MAPA TODO (CORRIGIDA)
+-- // A MUDANÇA: FORÇAR DISTÂNCIA NO MAPA TODO
+-- Isso faz o PromptShown ativar mesmo que você esteja longe
 RunService.Stepped:Connect(function()
+    if FarmAtivo then
+        for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
+            prompt.MaxActivationDistance = math.huge
+            prompt.RequiresLineOfSight = false
+        end
+    end
+end)
+
+-- // SUA LÓGICA ORIGINAL (MANTIDA)
+ProximityPromptService.PromptShown:Connect(function(prompt) 
     if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
 
-    -- Busca todos os botões do mapa continuamente
-    for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
-        local item = prompt.Parent
-        if item then
-            local nomeObj = item.Name:lower()
-            local textoPrompt = (prompt.ObjectText or ""):lower()
+    local item = prompt.Parent
+    if not item then return end
 
-            -- Verifica se o item na esteira bate com o da lista
-            if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+    local nomeObj = item.Name:lower()
+    local textoPrompt = (prompt.ObjectText or ""):lower()
 
-                    if hrp and targetPart then
-                        -- BYPASS DE DISTÂNCIA: Força o botão a funcionar de longe
-                        prompt.MaxActivationDistance = math.huge
-                        prompt.RequiresLineOfSight = false
-                        
-                        -- TELEPORTE: Te joga em cima do item independente de onde estiver
-                        hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                        
-                        task.wait(0.12) -- Delay para o servidor processar seu teleporte
-                        fireproximityprompt(prompt)
-                        
-                        task.wait(0.5) -- Pausa para não spammar o mesmo item
-                    end
-                end)
+    if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
+
+            if hrp and targetPart then
+                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+                
+                task.wait(0.1) 
+                prompt.HoldDuration = 0
+                fireproximityprompt(prompt)
+                
+                task.wait(0.5) 
             end
-        end
+        end)
     end
 end)
