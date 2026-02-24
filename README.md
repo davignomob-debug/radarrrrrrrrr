@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService") -- Adicionado para checagem constante
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 -- // LISTA COMPLETA DE BRAINROTS
@@ -10,17 +10,17 @@ local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cact
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // ANTI-AFK (Essencial para dormir)
+-- // ANTI-AFK (Dormir sem DC)
 local VirtualUser = game:GetService("VirtualUser")
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- // INTERFACE ARRASTÁVEL
+-- // INTERFACE V11 (MANTIDA ORIGINAL)
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
-    sg.Name = "AutoFarm_Infinite_Fixed"
+    sg.Name = "AutoFarm_Infinite_V11"
 
     local Main = Instance.new("Frame", sg)
     Main.Size = UDim2.fromOffset(250, 220)
@@ -96,18 +96,18 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
 end)
 
--- // NOVA LÓGICA DE DETECÇÃO GLOBAL (RESOLVE O PROBLEMA DA DISTÂNCIA)
+-- // LÓGICA DE TELEPORTE MAPA TODO (CORRIGIDA)
 RunService.Stepped:Connect(function()
     if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
 
-    -- Em vez de esperar o prompt aparecer, nós buscamos todos os prompts existentes no mapa
+    -- Busca todos os botões do mapa continuamente
     for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
         local item = prompt.Parent
         if item then
             local nomeObj = item.Name:lower()
             local textoPrompt = (prompt.ObjectText or ""):lower()
 
-            -- Verifica se o item é o alvo selecionado
+            -- Verifica se o item na esteira bate com o da lista
             if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
                 pcall(function()
                     local char = LocalPlayer.Character
@@ -115,17 +115,17 @@ RunService.Stepped:Connect(function()
                     local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
 
                     if hrp and targetPart then
-                        -- FORÇAR ALCANCE (Isso faz o teleporte funcionar de longe)
+                        -- BYPASS DE DISTÂNCIA: Força o botão a funcionar de longe
                         prompt.MaxActivationDistance = math.huge
                         prompt.RequiresLineOfSight = false
                         
-                        -- Teleporte e Coleta
+                        -- TELEPORTE: Te joga em cima do item independente de onde estiver
                         hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
                         
-                        task.wait(0.15) -- Pequeno delay para o jogo processar a nova posição
+                        task.wait(0.12) -- Delay para o servidor processar seu teleporte
                         fireproximityprompt(prompt)
                         
-                        task.wait(0.5) -- Delay para não bugar no mesmo item
+                        task.wait(0.5) -- Pausa para não spammar o mesmo item
                     end
                 end)
             end
