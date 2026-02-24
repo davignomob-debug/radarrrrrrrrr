@@ -1,19 +1,23 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 -- // LISTA COMPLETA DE BRAINROTS
-local Brainrots = {
-    "Nenhum",
-    "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli",
-    "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur"
-}
+local Brainrots = { "Nenhum", "Tim Cheese", "Lirililarila", "Fluri Flura", "Cacto", "Hipopotamo", "Pipi Potato", "Tric Trac", "Barabum", "Burbaloni", "Loliloli", "Boneca", "Ambalabu", "Trippi Troppi", "Svinina", "Bombardino", "Bambini", "Crostini", "Avacodini", "Guffo", "Bandito", "Bobrito", "Tatatata", "Sahur" }
 
 local AlvoSelecionado = "Nenhum"
 local FarmAtivo = false
 
--- // INTERFACE ARRASTÁVEL
+-- // ANTI-AFK (Dormir sem tomar Kick)
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+-- // INTERFACE ARRASTÁVEL V11 + BOTÃO X
 local function CreateUI()
     local sg = Instance.new("ScreenGui", (gethui and gethui()) or game:GetService("CoreGui"))
     sg.Name = "AutoFarm_Infinite_V11"
@@ -24,10 +28,25 @@ local function CreateUI()
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-    
+
     local stroke = Instance.new("UIStroke", Main)
     stroke.Color = Color3.fromRGB(0, 255, 127)
     stroke.Thickness = 2
+
+    -- BOTÃO X PARA FECHAR
+    local CloseBtn = Instance.new("TextButton", Main)
+    CloseBtn.Size = UDim2.fromOffset(25, 25)
+    CloseBtn.Position = UDim2.new(1, -30, 0, 5)
+    CloseBtn.Text = "X"
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 14
+    Instance.new("UICorner", CloseBtn)
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        sg:Destroy()
+    end)
 
     local Title = Instance.new("TextLabel", Main)
     Title.Size = UDim2.new(1, 0, 0, 35)
@@ -75,7 +94,6 @@ local function CreateUI()
         end)
     end
 
-    -- Arrastar UI
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end end)
     UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart; Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
@@ -87,43 +105,37 @@ end
 
 local ToggleBtn = CreateUI()
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    FarmAtivo = not FarmAtivo
-    ToggleBtn.Text = FarmAtivo and "FARMANDO... (ON)" or "AUTO FARM: OFF"
-    ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35)
+ToggleBtn.MouseButton1Click:Connect(function() 
+    FarmAtivo = not FarmAtivo 
+    ToggleBtn.Text = FarmAtivo and "FARMANDO... (ON)" or "AUTO FARM: OFF" 
+    ToggleBtn.BackgroundColor3 = FarmAtivo and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(35, 35, 35) 
 end)
 
--- // LÓGICA INFINITA (DORMIR E FARMAR)
-ProximityPromptService.PromptShown:Connect(function(prompt)
+-- // LÓGICA DE TELEPORTE MAPA TODO
+RunService.Heartbeat:Connect(function()
     if not FarmAtivo or AlvoSelecionado == "nenhum" then return end
 
-    local item = prompt.Parent
-    if not item then return end
+    for _, prompt in ipairs(ProximityPromptService:GetProximityPrompts()) do
+        local item = prompt.Parent
+        if item and (item.Name:lower():find(AlvoSelecionado) or (prompt.ObjectText or ""):lower():find(AlvoSelecionado)) then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
 
-    local nomeObj = item.Name:lower()
-    local textoPrompt = (prompt.ObjectText or ""):lower()
-
-    -- Verifica se o item é o alvo
-    if nomeObj:find(AlvoSelecionado) or textoPrompt:find(AlvoSelecionado) then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
-
-            if hrp and targetPart then
-                -- Teleporte e Coleta
-                local originalPos = hrp.CFrame -- Salva sua posição
-                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-                
-                task.wait(0.1) -- Tempo para o servidor registrar
-                prompt.HoldDuration = 0
-                fireproximityprompt(prompt)
-                
-                -- O SEGREDO PARA IR DORMIR:
-                -- Ele NÃO desativa o SniperAtivo. 
-                -- Ele apenas espera um pouco e você continua pronto para o próximo!
-                task.wait(0.5) 
-            end
-        end)
+                if hrp and targetPart then
+                    prompt.MaxActivationDistance = 9e9
+                    prompt.RequiresLineOfSight = false
+                    
+                    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+                    
+                    task.wait(0.1) 
+                    prompt.HoldDuration = 0
+                    fireproximityprompt(prompt)
+                    
+                    task.wait(0.5) 
+                end
+            end)
+        end
     end
 end)
