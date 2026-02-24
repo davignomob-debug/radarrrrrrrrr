@@ -16,7 +16,7 @@ local Brainrots = {
     "Bombombini Gusini", "Pandaccini Bananini", "Chef Crabracadabra",
     "Gorillo Watermelondrillo", "Frigo Camelo", "Girafa Celestre",
     "Ganganzelli Trulala", "Tigroligre Frutonni",
-    "Tralalerodon", "Esok", "La Vaca", "Strawberry",
+    "Tralaledon", "Esok", "La Vaca", "garama and madundung", Strawberry",
     "Capitano Clash Warnini", "Meowl"
 }
 
